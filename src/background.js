@@ -1,10 +1,29 @@
 // Listen for clicks on the browser action
 chrome.action.onClicked.addListener(async (tab) => {
-  // Execute content.js in the active tab
-  await chrome.scripting.executeScript({
-    target: { tabId: tab.id },
-    files: ['content.js'],
+  await chrome.action.setBadgeText({ tabId: tab.id, text: 'REC' });
+  await chrome.action.setBadgeBackgroundColor({
+    tabId: tab.id,
+    color: '#b42318',
   });
+  await chrome.action.setTitle({
+    tabId: tab.id,
+    title:
+      'Recording SVG motion for 8 seconds. Keep this tab visible and play or hover the artwork.',
+  });
+  try {
+    await chrome.scripting.executeScript({
+      target: { tabId: tab.id },
+      files: ['content.js'],
+    });
+  } catch (error) {
+    console.error('Unable to capture SVGs:', error);
+  } finally {
+    await chrome.action.setBadgeText({ tabId: tab.id, text: '' });
+    await chrome.action.setTitle({
+      tabId: tab.id,
+      title: 'svg-grabber - capture SVGs and 8 seconds of motion',
+    });
+  }
 });
 
 chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {

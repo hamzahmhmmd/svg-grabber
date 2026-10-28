@@ -73,7 +73,31 @@ const createSvgCard = (svg, sender, index) => {
 
   const content = document.createElement('div');
   content.classList.add('card__content');
-  content.innerHTML = sanitizeSvgForPreview(svg);
+  const preview = document.createElement('img');
+  preview.src = `data:image/svg+xml;charset=utf-8,${encodeURIComponent(sanitizeSvgForPreview(svg))}`;
+  preview.alt = `Captured SVG ${index + 1}`;
+  content.appendChild(preview);
+
+  const motion = new DOMParser().parseFromString(
+    svg,
+    'image/svg+xml'
+  ).documentElement;
+  const status = document.createElement('p');
+  status.classList.add('card__motion');
+  const motionType = motion.getAttribute('data-svg-grabber-motion');
+  const labels = {
+    recorded: 'Recorded motion - 8 s loop',
+    css: 'CSS animation',
+    'unsupported-structure': 'Snapshot - SVG structure changed',
+    'size-limit': 'Snapshot - recording size limit',
+  };
+  status.textContent =
+    labels[motionType] ||
+    (motion.querySelector('animate, animateTransform, animateMotion, set')
+      ? 'SVG animation'
+      : 'Snapshot - no motion recorded');
+  status.title =
+    'JavaScript motion is sampled for 8 seconds. Keep the source tab visible and play or hover the artwork while REC is shown. Scroll or mouse interactions are recorded, not recreated.';
 
   const actions = document.createElement('div');
   actions.classList.add('card__actions');
@@ -88,7 +112,7 @@ const createSvgCard = (svg, sender, index) => {
   const downloadLink = document.createElement('a');
   downloadLink.classList.add('btn', 'btn--icon');
   downloadLink.download = `${toSafeFilename(sender)}-${index}.svg`;
-  downloadLink.href = `data:text/svg;base64,${base64doc}`;
+  downloadLink.href = `data:image/svg+xml;base64,${base64doc}`;
   downloadLink.setAttribute('aria-label', DOWNLOAD_TOOLTIP_TEXT);
   downloadLink.id = `download-btn-${index}`;
   downloadLink.innerHTML = downloadIcon;
@@ -98,7 +122,7 @@ const createSvgCard = (svg, sender, index) => {
   initTooltip(copyButton);
   initTooltip(downloadLink);
   actions.append(downloadLink, copyButton);
-  element.append(content, actions);
+  element.append(content, status, actions);
   return element;
 };
 
@@ -149,13 +173,15 @@ const showCopyButtonFeedback = (button) => {
     }
 
     if (label) {
-      label.textContent = button.dataset.originalText || COPY_LABEL_FALLBACK_TEXT;
+      label.textContent =
+        button.dataset.originalText || COPY_LABEL_FALLBACK_TEXT;
       label.hidden = false;
     }
 
     button.classList.remove('is-success');
     if (hintTooltip) {
-      hintTooltip.textContent = hintTooltip.dataset.originalText || COPY_TOOLTIP_TEXT;
+      hintTooltip.textContent =
+        hintTooltip.dataset.originalText || COPY_TOOLTIP_TEXT;
       hintTooltip.setAttribute('role', 'tooltip');
       hintTooltip.removeAttribute('aria-live');
       delete hintTooltip.dataset.locked;
@@ -168,7 +194,8 @@ const showCopyButtonFeedback = (button) => {
 };
 
 export const setSvgUrl = (data, sender, pageUrl) => {
-  const { senderLink, senderTextSecondary, svgGallery, svgCount, controls } = getElements();
+  const { senderLink, senderTextSecondary, svgGallery, svgCount, controls } =
+    getElements();
   let sourceLabel = sender;
 
   if (senderLink) {

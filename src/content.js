@@ -1,4 +1,8 @@
-import { optimizeSVG, processExternalSVGs, processInlineSVGs } from './svg-processor';
+import {
+  optimizeSVG,
+  processExternalSVGs,
+  processInlineSVGs,
+} from './svg-processor';
 
 // Main function to process SVGs
 const processSVGs = async () => {
@@ -13,7 +17,7 @@ const processSVGs = async () => {
     const allSVGs = [...inlineSVGs, ...externalSVGs];
     const processedSVGs = allSVGs.map((svg) => optimizeSVG(svg.outerHTML));
 
-    console.log('Processed SVG codes:', processedSVGs);
+    console.log(`Captured ${processedSVGs.length} SVGs`);
 
     // Send message to background script
     chrome.runtime.sendMessage({
@@ -26,4 +30,6 @@ const processSVGs = async () => {
 };
 
 // Call processSVGs immediately when the script is injected
-processSVGs();
+(async () => {
+  await processSVGs();
+})();

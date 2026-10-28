@@ -1,10 +1,7 @@
 import { ERROR_NOT_SVG_ELEMENT, hasUseElement, isSVGElement } from './checkers';
 import { serializeSVGNode } from './helpers';
-import {
-  convertDimensionsToViewBox,
-  removeClassAttribute,
-  removeStyleAttribute,
-} from './modifiers';
+import { captureAnimatedSVGs } from './animation-capture';
+import { convertDimensionsToViewBox } from './modifiers';
 
 const EXTERNAL_SVG_FETCH_CONCURRENCY = 8;
 
@@ -36,8 +33,7 @@ const processSVGNode = (node) => {
     }
     const clonedNode = node.cloneNode(true);
     convertDimensionsToViewBox(clonedNode);
-    removeClassAttribute(clonedNode);
-    removeStyleAttribute(clonedNode);
+    clonedNode.setAttribute('xmlns', 'http://www.w3.org/2000/svg');
     return clonedNode;
   } catch (error) {
     console.error('Error processing SVG node:', error);
@@ -45,9 +41,13 @@ const processSVGNode = (node) => {
   }
 };
 
-export const processInlineSVGs = () => {
+export const processInlineSVGs = async () => {
   try {
-    const svgNodes = Array.from(document.querySelectorAll('svg'), processSVGNode).filter(Boolean);
+    const sources = Array.from(document.querySelectorAll('svg')).filter(
+      (node) => !node.parentElement?.closest('svg') && !hasUseElement(node)
+    );
+    const captured = await captureAnimatedSVGs(sources);
+    const svgNodes = captured.map(processSVGNode).filter(Boolean);
     return removeDuplicateSVGs(svgNodes);
   } catch (error) {
     console.error('Error processing inline SVGs:', error);
@@ -57,13 +57,22 @@ export const processInlineSVGs = () => {
 
 export const processExternalSVGs = async () => {
   try {
-    const imgElements = Array.from(document.querySelectorAll('img[src$=".svg"]'));
+    const imgElements = Array.from(
+      document.querySelectorAll('img[src$=".svg"]')
+    );
     if (imgElements.length === 0) return [];
 
     const svgNodes = [];
 
-    for (let index = 0; index < imgElements.length; index += EXTERNAL_SVG_FETCH_CONCURRENCY) {
-      const batch = imgElements.slice(index, index + EXTERNAL_SVG_FETCH_CONCURRENCY);
+    for (
+      let index = 0;
+      index < imgElements.length;
+      index += EXTERNAL_SVG_FETCH_CONCURRENCY
+    ) {
+      const batch = imgElements.slice(
+        index,
+        index + EXTERNAL_SVG_FETCH_CONCURRENCY
+      );
       const batchResults = await Promise.all(
         batch.map(async (img) => {
           try {

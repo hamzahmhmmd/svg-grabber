@@ -20,11 +20,17 @@
     border-radius: calc(var(--border-radius) * calc(var(--spacing) / 2));
     padding: var(--spacing);
 
-    svg {
+    img {
       aspect-ratio: 1;
       height: 100%;
       width: 100%;
     }
+  }
+
+  .card__motion {
+    font-size: 0.75rem;
+    margin: 0;
+    color: var(--color-ink-dark);
   }
 
   .card__actions {
