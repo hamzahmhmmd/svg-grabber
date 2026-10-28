@@ -5,10 +5,10 @@ export default defineConfig({
   build: {
     rollupOptions: {
       input: {
-        background: resolve(__dirname, 'src/background.js'),
-        content: resolve(__dirname, 'src/content.js'),
-        manager: resolve(__dirname, 'src/svg-core/manager.js'),
-        styles: resolve(__dirname, 'src/styles.css'),
+        background: resolve(import.meta.dirname, 'src/background.js'),
+        content: resolve(import.meta.dirname, 'src/content.js'),
+        manager: resolve(import.meta.dirname, 'src/svg-core/manager.js'),
+        styles: resolve(import.meta.dirname, 'src/styles.css'),
       },
       output: {
         entryFileNames: '[name].js',

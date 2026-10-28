@@ -1,0 +1,96 @@
+<!doctype html>
+<html lang="en">
+  <meta charset="utf-8" />
+  <title>SVG motion export verification</title>
+  <style>
+    body {
+      font: 16px system-ui;
+      margin: 32px;
+      background: #f5f5f2;
+      color: #222;
+    }
+    .examples {
+      display: flex;
+      gap: 24px;
+    }
+    section {
+      background: white;
+      padding: 20px;
+      width: 360px;
+      border: 1px solid #ddd;
+    }
+    svg,
+    img {
+      width: 320px;
+      height: 220px;
+    }
+    #status {
+      white-space: pre-wrap;
+    }
+  </style>
+  <h1>SVG motion export verification</h1>
+  <p>Source motion and exported, script-free SVG replay.</p>
+  <div class="examples">
+    <section>
+      <h2>Source</h2>
+      <svg id="source" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 220">
+        <g transform="matrix(1 0 0 1 0 0)">
+          <circle cx="50" cy="70" r="24" fill="#b64b31" />
+        </g>
+        <path
+          d="M40 140L80 140L60 180Z"
+          fill="#297b69"
+          style="display: block"
+        />
+      </svg>
+    </section>
+    <section>
+      <h2>Exported SVG</h2>
+      <div id="output"></div>
+    </section>
+  </div>
+  <p id="status">Recording...</p>
+  <script type="module">
+    import { captureAnimatedSVGs } from '../src/svg-processor/animation-capture.js';
+    const source = document.querySelector('#source');
+    const start = performance.now();
+    const timer = setInterval(() => {
+      const phase = (performance.now() - start) % 1000 < 500;
+      source.firstChild.setAttribute(
+        'transform',
+        phase ? 'matrix(1 0 0 1 0 0)' : 'matrix(1 0 0 1 180 0)'
+      );
+      source.lastChild.setAttribute(
+        'd',
+        phase ? 'M40 140L80 140L60 180Z' : 'M180 140L220 140L200 180Z'
+      );
+      source.lastChild.style.display = phase ? 'block' : 'none';
+    }, 16);
+    const [exported] = await captureAnimatedSVGs([source], {
+      durationMs: 1000,
+      intervalMs: 16,
+    });
+    clearInterval(timer);
+    const text = new XMLSerializer().serializeToString(exported);
+    const img = new Image();
+    img.alt = 'Exported animated SVG';
+    img.src = 'data:image/svg+xml;charset=utf-8,' + encodeURIComponent(text);
+    document.querySelector('#output').append(img);
+    await img.decode();
+    const canvas = document.createElement('canvas');
+    canvas.width = 320;
+    canvas.height = 220;
+    const ctx = canvas.getContext('2d');
+    const pixel = (x, y) => Array.from(ctx.getImageData(x, y, 1, 1).data);
+    await new Promise((resolve) => setTimeout(resolve, 100));
+    ctx.drawImage(img, 0, 0, 320, 220);
+    const before = pixel(50, 70);
+    await new Promise((resolve) => setTimeout(resolve, 550));
+    ctx.clearRect(0, 0, 320, 220);
+    ctx.drawImage(img, 0, 0, 320, 220);
+    const after = pixel(230, 70);
+    document.querySelector('#status').textContent =
+      `Transform playback: ${before[3] > 0 && after[3] > 0 ? 'PASS' : 'FAIL'}\nBefore: ${before}\nAfter: ${after}\nMotion status: ${exported.dataset.svgGrabberMotion}\nStandalone SVG size: ${text.length} bytes`;
+    window.exportedSvg = text;
+  </script>
+</html>
